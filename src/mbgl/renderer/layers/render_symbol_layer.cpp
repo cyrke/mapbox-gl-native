@@ -35,24 +35,29 @@ Point<float> calculateVariableRenderShift(style::SymbolAnchorType anchor, float 
         (shiftY / textBoxScale + offset.y) * renderTextSize
     );
 }
+
+inline const SymbolLayer::Impl& impl(const Immutable<style::Layer::Impl>& impl) {
+    return static_cast<const SymbolLayer::Impl&>(*impl);
+}
+
 } // namespace
 
 RenderSymbolLayer::RenderSymbolLayer(Immutable<style::SymbolLayer::Impl> _impl)
-    : RenderLayer(std::move(_impl)),
-      unevaluated(impl().paint.untransitioned()) {
+    : RenderLayer(makeMutable<SymbolLayerProperties>(std::move(_impl))),
+      unevaluated(impl(baseImpl).paint.untransitioned()) {
 }
 
-const style::SymbolLayer::Impl& RenderSymbolLayer::impl() const {
-    return static_cast<const style::SymbolLayer::Impl&>(*baseImpl);
-}
+RenderSymbolLayer::~RenderSymbolLayer() = default;
 
 void RenderSymbolLayer::transition(const TransitionParameters& parameters) {
-    unevaluated = impl().paint.transitioned(parameters, std::move(unevaluated));
+    unevaluated = impl(baseImpl).paint.transitioned(parameters, std::move(unevaluated));
 }
 
 void RenderSymbolLayer::evaluate(const PropertyEvaluationParameters& parameters) {
-    evaluated = unevaluated.evaluate(parameters);
-
+    auto properties = makeMutable<SymbolLayerProperties>(
+        staticImmutableCast<SymbolLayer::Impl>(baseImpl),
+        unevaluated.evaluate(parameters));
+    const auto& evaluated = properties->evaluated;
     auto hasIconOpacity = evaluated.get<style::IconColor>().constantOr(Color::black()).a > 0 ||
                           evaluated.get<style::IconHaloColor>().constantOr(Color::black()).a > 0;
     auto hasTextOpacity = evaluated.get<style::TextColor>().constantOr(Color::black()).a > 0 ||
@@ -61,6 +66,7 @@ void RenderSymbolLayer::evaluate(const PropertyEvaluationParameters& parameters)
     passes = ((evaluated.get<style::IconOpacity>().constantOr(1) > 0 && hasIconOpacity && iconSize > 0)
               || (evaluated.get<style::TextOpacity>().constantOr(1) > 0 && hasTextOpacity && textSize > 0))
              ? RenderPass::Translucent : RenderPass::None;
+    evaluatedProperties = std::move(properties);
 }
 
 bool RenderSymbolLayer::hasTransition() const {
@@ -91,7 +97,6 @@ void RenderSymbolLayer::render(PaintParameters& parameters, RenderSource*) {
     if (parameters.pass == RenderPass::Opaque) {
         return;
     }
-
     for (const RenderTile& tile : renderTiles) {
         auto bucket_ = tile.tile.getBucket<SymbolBucket>(*baseImpl);
         if (!bucket_) {
@@ -491,6 +496,7 @@ void RenderSymbolLayer::setRenderTiles(RenderTiles tiles, const TransformState& 
 
 void RenderSymbolLayer::updateBucketPaintProperties(Bucket* bucket) const {
     assert(bucket->supportsLayer(*baseImpl));
+    const auto& evaluated = static_cast<const SymbolLayerProperties&>(*evaluatedProperties).evaluated;
     static_cast<SymbolBucket*>(bucket)->updatePaintProperties(getID(), evaluated);
 }
 
