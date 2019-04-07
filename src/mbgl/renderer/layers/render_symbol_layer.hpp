@@ -85,7 +85,7 @@ private:
                                                           const style::SymbolLayoutProperties::PossiblyEvaluated&);
     static style::SymbolPropertyValues textPropertyValues(const style::SymbolPaintProperties::PossiblyEvaluated&,
                                                           const style::SymbolLayoutProperties::PossiblyEvaluated&);
-    void updateBucketPaintProperties(Bucket*) const final;
+    void updateBucketPaintProperties(Bucket*) const override;
 };
 
 } // namespace mbgl

@@ -12,6 +12,7 @@
 #include <mbgl/util/i18n.hpp>
 #include <mbgl/util/platform.hpp>
 #include <mbgl/tile/geometry_tile_data.hpp>
+#include <mbgl/tile/tile.hpp>
 
 #include <mapbox/polylabel.hpp>
 
@@ -99,7 +100,7 @@ SymbolLayout::SymbolLayout(const BucketParameters& parameters,
     }
 
     for (const auto& layer : layers) {
-        layerPaintProperties.emplace(layer->baseImpl->id, toSymbolLayerProperties(layer).evaluated);
+        layerPaintProperties.emplace(layer->baseImpl->id, layer);
     }
 
     // Determine glyph dependencies
@@ -542,7 +543,7 @@ std::vector<float> CalculateTileDistances(const GeometryCoordinates& line, const
     return tileDistances;
 }
 
-void SymbolLayout::createBucket(const ImagePositions&, std::unique_ptr<FeatureIndex>&, std::unordered_map<std::string, std::shared_ptr<Bucket>>& buckets, const bool firstLoad, const bool showCollisionBoxes) {
+void SymbolLayout::createBucket(const ImagePositions&, std::unique_ptr<FeatureIndex>&, std::unordered_map<std::string, LayerRenderData>& renderData, const bool firstLoad, const bool showCollisionBoxes) {
     const bool zOrderByViewport = layout.get<SymbolZOrder>() == SymbolZOrderType::ViewportY;
     const bool sortFeaturesByY = zOrderByViewport && (layout.get<TextAllowOverlap>() || layout.get<IconAllowOverlap>() ||
         layout.get<TextIgnorePlacement>() || layout.get<IconIgnorePlacement>());
@@ -609,7 +610,7 @@ void SymbolLayout::createBucket(const ImagePositions&, std::unique_ptr<FeatureIn
             if (!firstLoad) {
                 bucket->justReloaded = true;
             }
-            buckets.emplace(pair.first, bucket);
+            renderData.emplace(pair.first, LayerRenderData{bucket, pair.second});
         }
     }
 

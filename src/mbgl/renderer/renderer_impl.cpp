@@ -240,7 +240,7 @@ void Renderer::Impl::render(const UpdateParameters& updateParameters) {
     renderItems.reserve(layerImpls->size());
     for (const auto& sourceImpl : *sourceImpls) {
         RenderSource* source = renderSources.at(sourceImpl->id).get();
-        std::vector<Immutable<Layer::Impl>> filteredLayersForSource;
+        std::vector<Immutable<LayerProperties>> filteredLayersForSource;
         filteredLayersForSource.reserve(layerImpls->size());
         bool sourceNeedsRendering = false;
         bool sourceNeedsRelayout = false;       
@@ -256,7 +256,7 @@ void Renderer::Impl::render(const UpdateParameters& updateParameters) {
                     sourceNeedsRelayout = (sourceNeedsRelayout || hasImageDiff || hasLayoutDifference(layerDiff, layerImpl->id));
                     if (layerNeedsRendering) {
                         sourceNeedsRendering = true;
-                        filteredLayersForSource.push_back(layerImpl);
+                        filteredLayersForSource.push_back(layer->evaluatedProperties);
                         renderItems.emplace_back(*layer, source);
                     }
                 }
