@@ -26,6 +26,7 @@ public:
     GeometryCollection geometry;
     optional<TaggedString> formattedText;
     optional<std::string> icon;
+    optional<unsigned int> sortKey;
     std::size_t index;
 };
 
