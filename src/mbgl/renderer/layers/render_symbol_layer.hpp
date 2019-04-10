@@ -81,11 +81,12 @@ private:
     float iconSize = 1.0f;
     float textSize = 16.0f;
 
+    bool hasFormatSectionOverrides = false;
+
     static style::SymbolPropertyValues iconPropertyValues(const style::SymbolPaintProperties::PossiblyEvaluated&,
                                                           const style::SymbolLayoutProperties::PossiblyEvaluated&);
     static style::SymbolPropertyValues textPropertyValues(const style::SymbolPaintProperties::PossiblyEvaluated&,
                                                           const style::SymbolLayoutProperties::PossiblyEvaluated&);
-    void updateBucketPaintProperties(Bucket*) const override;
 };
 
 } // namespace mbgl

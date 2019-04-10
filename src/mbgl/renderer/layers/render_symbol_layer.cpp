@@ -51,13 +51,20 @@ RenderSymbolLayer::~RenderSymbolLayer() = default;
 
 void RenderSymbolLayer::transition(const TransitionParameters& parameters) {
     unevaluated = impl(baseImpl).paint.transitioned(parameters, std::move(unevaluated));
+    hasFormatSectionOverrides = SymbolLayerPaintPropertyOverrides::hasOverrides(impl(baseImpl).layout.get<TextField>());
 }
 
 void RenderSymbolLayer::evaluate(const PropertyEvaluationParameters& parameters) {
     auto properties = makeMutable<SymbolLayerProperties>(
         staticImmutableCast<SymbolLayer::Impl>(baseImpl),
         unevaluated.evaluate(parameters));
-    const auto& evaluated = properties->evaluated;
+    auto& evaluated = properties->evaluated;
+    auto& layout = impl(baseImpl).layout;
+
+    if (hasFormatSectionOverrides) {
+        SymbolLayerPaintPropertyOverrides::setOverrides(layout, evaluated);
+    }
+
     auto hasIconOpacity = evaluated.get<style::IconColor>().constantOr(Color::black()).a > 0 ||
                           evaluated.get<style::IconHaloColor>().constantOr(Color::black()).a > 0;
     auto hasTextOpacity = evaluated.get<style::TextColor>().constantOr(Color::black()).a > 0 ||
@@ -98,14 +105,14 @@ void RenderSymbolLayer::render(PaintParameters& parameters, RenderSource*) {
         return;
     }
     for (const RenderTile& tile : renderTiles) {
-        auto bucket_ = tile.tile.getBucket<SymbolBucket>(*baseImpl);
-        if (!bucket_) {
+        const LayerRenderData* renderData = tile.tile.getLayerRenderData(*baseImpl);
+        if (!renderData) {
             continue;
         }
-        SymbolBucket& bucket = *bucket_;
+        auto& bucket = static_cast<SymbolBucket&>(*renderData->bucket);
+        const auto& evaluated_ = getEvaluated<SymbolLayerProperties>(renderData->layerProperties);
         assert(bucket.paintProperties.find(getID()) != bucket.paintProperties.end());
         const auto& bucketPaintProperties = bucket.paintProperties.at(getID());
-        const auto& evaluated_ = bucketPaintProperties.evaluated;
         const auto& layout = bucket.layout;
 
         auto draw = [&] (auto& programInstance,
@@ -492,12 +499,6 @@ void RenderSymbolLayer::setRenderTiles(RenderTiles tiles, const TransformState& 
 
         return std::tie(b.get().id.canonical.z, par.y, par.x) < std::tie(a.get().id.canonical.z, pbr.y, pbr.x);
     });
-}
-
-void RenderSymbolLayer::updateBucketPaintProperties(Bucket* bucket) const {
-    assert(bucket->supportsLayer(*baseImpl));
-    const auto& evaluated = static_cast<const SymbolLayerProperties&>(*evaluatedProperties).evaluated;
-    static_cast<SymbolBucket*>(bucket)->updatePaintProperties(getID(), evaluated);
 }
 
 } // namespace mbgl
