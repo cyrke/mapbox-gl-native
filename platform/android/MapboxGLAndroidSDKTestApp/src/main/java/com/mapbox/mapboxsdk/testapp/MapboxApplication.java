@@ -8,9 +8,13 @@ import com.mapbox.mapboxsdk.MapStrictMode;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.log.Logger;
 import com.mapbox.mapboxsdk.maps.TelemetryDefinition;
+import com.mapbox.mapboxsdk.module.http.HttpRequestUtil;
+import com.mapbox.mapboxsdk.testapp.utils.TileLoadingInterceptor;
 import com.mapbox.mapboxsdk.testapp.utils.TimberLogger;
 import com.mapbox.mapboxsdk.testapp.utils.TokenUtils;
 import com.squareup.leakcanary.LeakCanary;
+
+import okhttp3.OkHttpClient;
 import timber.log.Timber;
 
 import static timber.log.Timber.DebugTree;
@@ -80,6 +84,7 @@ public class MapboxApplication extends Application {
       throw new IllegalStateException("Telemetry was unavailable during test application start.");
     }
     telemetry.setDebugLoggingEnabled(true);
+    setUpTileLoadingMeasurement();
 
     MapStrictMode.setStrictModeEnabled(true);
   }
@@ -88,5 +93,12 @@ public class MapboxApplication extends Application {
     if (TextUtils.isEmpty(accessToken) || accessToken.equals(DEFAULT_MAPBOX_ACCESS_TOKEN)) {
       Timber.e(ACCESS_TOKEN_NOT_SET_MESSAGE);
     }
+  }
+
+  private void setUpTileLoadingMeasurement() {
+    OkHttpClient okHttpClient = new OkHttpClient.Builder()
+            .addNetworkInterceptor(new TileLoadingInterceptor())
+            .build();
+    HttpRequestUtil.setOkHttpClient(okHttpClient);
   }
 }
